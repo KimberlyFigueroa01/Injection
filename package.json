@@ -1,0 +1,18 @@
+{
+  "name": "injection-lab",
+  "version": "1.0.0",
+  "description": "Aplicación educativa para demostrar vulnerabilidades de inyección SQL y de comandos (OWASP)",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "sql.js": "^1.11.0"
+  },
+  "keywords": ["security", "education", "sql-injection", "owasp"],
+  "license": "MIT",
+  "private": true
+}

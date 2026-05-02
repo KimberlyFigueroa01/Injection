@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Laboratorio educativo de SQL Injection — OWASP Top 10 Demo">
+  <title>🔬 Laboratorio de Inyección SQL — OWASP</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     LOGIN SCREEN
+     ═══════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-logo">🔬</div>
+        <h1>Injection Lab</h1>
+        <p>Laboratorio Educativo OWASP — SQL Injection</p>
+      </div>
+
+      <!-- Mode Toggle -->
+      <div class="mode-toggle" id="login-mode-toggle">
+        <button class="mode-btn vulnerable active" data-mode="vulnerable" id="btn-mode-vuln">
+          🔴 Modo Vulnerable
+        </button>
+        <button class="mode-btn secure" data-mode="secure" id="btn-mode-secure">
+          🟢 Modo Seguro
+        </button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" autocomplete="off">
+        <div class="form-group">
+          <label for="username">Usuario</label>
+          <input type="text" id="username" name="username" placeholder="Ingrese usuario..." autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <input type="text" id="password" name="password" placeholder="Ingrese contraseña..." autocomplete="off">
+        </div>
+        <button type="submit" class="login-btn vulnerable" id="login-submit-btn">
+          Iniciar Sesión — Modo Vulnerable
+        </button>
+      </form>
+
+      <!-- Login Message -->
+      <div class="login-message" id="login-message"></div>
+
+      <!-- Payloads Hint -->
+      <div class="payloads-hint">
+        <h4>💡 Payloads de prueba (clic para copiar)</h4>
+        <code onclick="fillPayload(`admin' --`, 'cualquiera')">Usuario: admin' --</code>
+        <code onclick="fillPayload(`' OR '1'='1`, `' OR '1'='1`)">Usuario: ' OR '1'='1  |  Pass: ' OR '1'='1</code>
+        <code onclick="fillPayload('admin', 'admin123')">Usuario: admin  |  Pass: admin123 (legítimo)</code>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     DASHBOARD SCREEN
+     ═══════════════════════════════════════════════════ -->
+<div id="dashboard-screen">
+  <!-- Nav Bar -->
+  <nav class="dashboard-nav">
+    <div class="nav-brand">
+      <div class="nav-logo">🔬</div>
+      <span>Injection Lab</span>
+    </div>
+    <div class="nav-user">
+      <div class="nav-user-info">
+        <div class="name" id="nav-username">Admin</div>
+        <div class="role" id="nav-role">administrator</div>
+      </div>
+      <div class="nav-avatar" id="nav-avatar">A</div>
+      <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
+    </div>
+  </nav>
+
+  <div class="dashboard-content">
+    <!-- Stats -->
+    <div class="stats-grid" id="stats-grid"></div>
+
+    <!-- Tabs -->
+    <div class="tab-nav" id="tab-nav">
+      <button class="tab-btn active" data-tab="results">📊 Resultados</button>
+      <button class="tab-btn" data-tab="education">📚 Modo Educativo</button>
+      <button class="tab-btn" data-tab="comparison">⚖️ Vulnerable vs Seguro</button>
+      <button class="tab-btn" data-tab="command">💻 Command Injection</button>
+      <button class="tab-btn" data-tab="search">🔍 Búsqueda</button>
+    </div>
+
+    <!-- TAB: Results -->
+    <div class="tab-panel active" id="tab-results">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon info">📊</div>
+          <div>
+            <div class="card-title">Resultado del Login</div>
+            <div class="card-subtitle">Consulta SQL generada y datos retornados</div>
+          </div>
+          <span class="badge" id="result-mode-badge">—</span>
+        </div>
+        <div>
+          <label style="font-size:0.78rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Consulta SQL Generada:</label>
+          <div class="sql-display" id="sql-query-display">Inicia sesión para ver la consulta generada...</div>
+        </div>
+        <div style="margin-top:16px">
+          <label style="font-size:0.78rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Usuarios Retornados:</label>
+          <div id="results-table-container" style="overflow-x:auto">
+            <p style="color:var(--text-muted);padding:20px;text-align:center;font-size:0.88rem">Sin resultados aún</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Server Response -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon info">📝</div>
+          <div>
+            <div class="card-title">Respuesta Completa del Servidor</div>
+            <div class="card-subtitle">JSON devuelto por la API</div>
+          </div>
+        </div>
+        <div class="sql-display" id="server-response" style="color:var(--text-secondary);max-height:300px;overflow-y:auto">Esperando login...</div>
+      </div>
+    </div>
+
+    <!-- TAB: Education -->
+    <div class="tab-panel" id="tab-education">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon danger">⚠️</div>
+          <div>
+            <div class="card-title">¿Qué es SQL Injection?</div>
+            <div class="card-subtitle">OWASP Top 10 — A03:2021 Injection</div>
+          </div>
+        </div>
+        <p style="color:var(--text-secondary);margin-bottom:16px">
+          SQL Injection ocurre cuando datos no confiables del usuario se envían a un intérprete
+          como parte de un comando o consulta. Los datos hostiles del atacante pueden engañar al
+          intérprete para que ejecute comandos no deseados o acceda a datos sin autorización.
+        </p>
+        <div class="info-box danger">
+          <span>🔴</span>
+          <div>
+            <strong>Código Vulnerable (Concatenación):</strong><br>
+            <code style="font-family:'JetBrains Mono',monospace;font-size:0.82rem">
+              SELECT * FROM users WHERE username = '${username}' AND password = '${password}'
+            </code>
+          </div>
+        </div>
+        <div class="info-box success">
+          <span>🟢</span>
+          <div>
+            <strong>Código Seguro (Prepared Statement):</strong><br>
+            <code style="font-family:'JetBrains Mono',monospace;font-size:0.82rem">
+              SELECT * FROM users WHERE username = ? AND password = ?
+            </code>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon warn">💉</div>
+          <div>
+            <div class="card-title">¿Cómo funciona el ataque?</div>
+            <div class="card-subtitle">Paso a paso</div>
+          </div>
+        </div>
+        <ol class="steps-list">
+          <li>El atacante ingresa un payload malicioso en el campo de usuario: <code style="font-family:'JetBrains Mono',monospace;color:var(--accent-red)">admin' --</code></li>
+          <li>La aplicación concatena el input directamente en la consulta SQL sin sanitizar</li>
+          <li>La consulta resultante es: <code style="font-family:'JetBrains Mono',monospace;color:var(--accent-red)">SELECT * FROM users WHERE username = 'admin' --' AND password = 'x'</code></li>
+          <li>El <code style="font-family:'JetBrains Mono',monospace;color:var(--accent-amber)">--</code> comenta el resto de la consulta, eliminando la verificación de contraseña</li>
+          <li>El atacante obtiene acceso como administrador sin conocer la contraseña</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon safe">🛡️</div>
+          <div>
+            <div class="card-title">Mitigaciones Recomendadas</div>
+            <div class="card-subtitle">Buenas prácticas de seguridad</div>
+          </div>
+        </div>
+        <ol class="steps-list">
+          <li><strong>Prepared Statements (Consultas Parametrizadas):</strong> Separar el código SQL de los datos del usuario</li>
+          <li><strong>ORM (Object-Relational Mapping):</strong> Usar herramientas como Sequelize, Prisma o SQLAlchemy que generan consultas seguras</li>
+          <li><strong>Validación de Entrada:</strong> Verificar tipo, longitud y formato de todos los datos del usuario</li>
+          <li><strong>Principio de Mínimo Privilegio:</strong> La cuenta de BD solo debe tener los permisos estrictamente necesarios</li>
+          <li><strong>WAF (Web Application Firewall):</strong> Filtrar patrones de inyección conocidos como capa adicional</li>
+          <li><strong>Escapar Caracteres Especiales:</strong> Como última línea de defensa, escapar caracteres como ' " ; --</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon danger">☠️</div>
+          <div>
+            <div class="card-title">Riesgos Asociados</div>
+            <div class="card-subtitle">Impacto potencial de la vulnerabilidad</div>
+          </div>
+        </div>
+        <div class="info-box danger">
+          <span>⚠️</span>
+          <div>
+            <strong>Confidencialidad:</strong> Exposición total de la base de datos (usuarios, contraseñas, datos sensibles)<br>
+            <strong>Integridad:</strong> Modificación o eliminación de datos (DROP TABLE, UPDATE)<br>
+            <strong>Disponibilidad:</strong> Denegación de servicio o destrucción de la base de datos<br>
+            <strong>Autenticación:</strong> Bypass completo del sistema de autenticación<br>
+            <strong>Escalación:</strong> Posible ejecución de comandos en el servidor (xp_cmdshell en SQL Server)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Comparison -->
+    <div class="tab-panel" id="tab-comparison">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon info">⚖️</div>
+          <div>
+            <div class="card-title">Comparación: Vulnerable vs Seguro</div>
+            <div class="card-subtitle">Diferencias clave en el código</div>
+          </div>
+        </div>
+
+        <div class="comparison-grid">
+          <!-- Vulnerable Side -->
+          <div class="comparison-col vulnerable-col">
+            <h3><span class="badge danger">🔴 INSEGURO</span> Concatenación</h3>
+            <div class="sql-display" style="border-color:rgba(239,68,68,0.3)">
+<span class="keyword">// ⚠️ Node.js — Vulnerable</span>
+const query =
+  <span class="danger-highlight">`SELECT * FROM users
+   WHERE username = '${username}'
+   AND password = '${password}'`</span>;
+
+db.prepare(query).all();
+
+<span class="keyword">// El input del usuario se INSERTA
+// directamente en la cadena SQL</span>
+            </div>
+
+            <div class="sql-display" style="border-color:rgba(239,68,68,0.3);margin-top:8px">
+<span class="keyword"># ⚠️ Python Flask — Vulnerable</span>
+query = <span class="danger-highlight">f"SELECT * FROM users
+  WHERE username = '{username}'
+  AND password = '{password}'"</span>
+
+cursor.execute(query)
+            </div>
+
+            <div class="sql-display" style="border-color:rgba(239,68,68,0.3);margin-top:8px">
+<span class="keyword">// ⚠️ PHP — Vulnerable</span>
+$query = <span class="danger-highlight">"SELECT * FROM users
+  WHERE username = '$user'
+  AND password = '$pass'"</span>;
+
+mysqli_query($conn, $query);
+            </div>
+          </div>
+
+          <!-- Secure Side -->
+          <div class="comparison-col secure-col">
+            <h3><span class="badge safe">🟢 SEGURO</span> Parametrizado</h3>
+            <div class="sql-display" style="border-color:rgba(34,197,94,0.3)">
+<span class="keyword">// ✅ Node.js — Seguro</span>
+const query =
+  <span class="safe-highlight">`SELECT * FROM users
+   WHERE username = ?
+   AND password = ?`</span>;
+
+db.prepare(query).all(
+  <span class="safe-highlight">username, password</span>
+);
+<span class="keyword">// Los valores se pasan SEPARADOS</span>
+            </div>
+
+            <div class="sql-display" style="border-color:rgba(34,197,94,0.3);margin-top:8px">
+<span class="keyword"># ✅ Python Flask — Seguro</span>
+query = <span class="safe-highlight">"SELECT * FROM users
+  WHERE username = %s
+  AND password = %s"</span>
+
+cursor.execute(query,
+  <span class="safe-highlight">(username, password)</span>)
+            </div>
+
+            <div class="sql-display" style="border-color:rgba(34,197,94,0.3);margin-top:8px">
+<span class="keyword">// ✅ PHP — Seguro (PDO)</span>
+$stmt = $pdo->prepare(
+  <span class="safe-highlight">"SELECT * FROM users
+   WHERE username = ?
+   AND password = ?"</span>);
+$stmt->execute(
+  <span class="safe-highlight">[$user, $pass]</span>);
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon info">🔬</div>
+          <div>
+            <div class="card-title">Prueba Interactiva</div>
+            <div class="card-subtitle">Compara el resultado del mismo payload en ambos modos</div>
+          </div>
+        </div>
+        <p style="color:var(--text-secondary);font-size:0.88rem;margin-bottom:12px">
+          Ingresa un payload y presiona ambos botones para ver la diferencia:
+        </p>
+        <div class="form-group">
+          <label>Payload de usuario</label>
+          <input type="text" id="compare-username" value="admin' --" style="width:100%;padding:10px 14px;background:var(--bg-glass);border:1px solid var(--border-glass);border-radius:var(--radius);color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:0.85rem">
+        </div>
+        <div class="form-group">
+          <label>Payload de contraseña</label>
+          <input type="text" id="compare-password" value="x" style="width:100%;padding:10px 14px;background:var(--bg-glass);border:1px solid var(--border-glass);border-radius:var(--radius);color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:0.85rem">
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:16px">
+          <button class="cmd-btn danger" onclick="runComparison('vulnerable')">🔴 Probar Vulnerable</button>
+          <button class="cmd-btn safe" onclick="runComparison('secure')">🟢 Probar Seguro</button>
+        </div>
+
+        <div class="comparison-grid">
+          <div class="comparison-col vulnerable-col">
+            <h3>🔴 Resultado Vulnerable</h3>
+            <div class="sql-display" id="compare-vuln-query" style="border-color:rgba(239,68,68,0.3);min-height:60px">Presiona "Probar Vulnerable"</div>
+            <div class="cmd-output" id="compare-vuln-result">—</div>
+          </div>
+          <div class="comparison-col secure-col">
+            <h3>🟢 Resultado Seguro</h3>
+            <div class="sql-display" id="compare-safe-query" style="border-color:rgba(34,197,94,0.3);min-height:60px">Presiona "Probar Seguro"</div>
+            <div class="cmd-output" id="compare-safe-result" style="color:var(--accent-cyan)">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Command Injection -->
+    <div class="tab-panel" id="tab-command">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon danger">💻</div>
+          <div>
+            <div class="card-title">Command Injection</div>
+            <div class="card-subtitle">Ejecución de comandos del sistema sin sanitización</div>
+          </div>
+        </div>
+        <p style="color:var(--text-secondary);font-size:0.88rem;margin-bottom:12px">
+          Esta sección demuestra cómo un input no sanitizado puede permitir la ejecución
+          de comandos arbitrarios en el servidor. El formulario simula un "ping" a un host.
+        </p>
+        <div class="info-box warning">
+          <span>⚠️</span>
+          <div>Prueba agregar <code style="font-family:'JetBrains Mono',monospace;color:var(--accent-amber)">127.0.0.1 & whoami</code> o <code style="font-family:'JetBrains Mono',monospace;color:var(--accent-amber)">127.0.0.1 & dir</code> en el modo vulnerable.</div>
+        </div>
+
+        <div class="comparison-grid" style="margin-top:16px">
+          <div class="comparison-col vulnerable-col">
+            <h3><span class="badge danger">🔴 VULNERABLE</span></h3>
+            <div class="cmd-input-group">
+              <input type="text" id="cmd-vuln-input" placeholder="Ej: 127.0.0.1 & whoami" value="127.0.0.1">
+              <button class="cmd-btn danger" onclick="runCommand('vulnerable')">Ejecutar</button>
+            </div>
+            <div class="cmd-output" id="cmd-vuln-output">Esperando comando...</div>
+          </div>
+          <div class="comparison-col secure-col">
+            <h3><span class="badge safe">🟢 SEGURO</span></h3>
+            <div class="cmd-input-group">
+              <input type="text" id="cmd-safe-input" placeholder="Ej: 127.0.0.1 & whoami" value="127.0.0.1">
+              <button class="cmd-btn safe" onclick="runCommand('secure')">Ejecutar</button>
+            </div>
+            <div class="cmd-output" id="cmd-safe-output" style="color:var(--accent-cyan)">Esperando comando...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Search -->
+    <div class="tab-panel" id="tab-search">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon info">🔍</div>
+          <div>
+            <div class="card-title">Búsqueda de Usuarios</div>
+            <div class="card-subtitle">Prueba SQL Injection en una consulta de búsqueda</div>
+          </div>
+        </div>
+        <div class="info-box warning">
+          <span>💡</span>
+          <div>Prueba buscar: <code style="font-family:'JetBrains Mono',monospace;color:var(--accent-amber)">%' OR '1'='1' --</code> en modo vulnerable para extraer todos los registros.</div>
+        </div>
+
+        <div class="comparison-grid" style="margin-top:16px">
+          <div class="comparison-col vulnerable-col">
+            <h3><span class="badge danger">🔴 VULNERABLE</span></h3>
+            <div class="cmd-input-group">
+              <input type="text" id="search-vuln-input" placeholder="Buscar usuario...">
+              <button class="cmd-btn danger" onclick="runSearch('vulnerable')">Buscar</button>
+            </div>
+            <div class="sql-display" id="search-vuln-query" style="border-color:rgba(239,68,68,0.3);min-height:40px;font-size:0.75rem">—</div>
+            <div id="search-vuln-results" style="margin-top:8px;font-size:0.85rem;color:var(--text-secondary)">—</div>
+          </div>
+          <div class="comparison-col secure-col">
+            <h3><span class="badge safe">🟢 SEGURO</span></h3>
+            <div class="cmd-input-group">
+              <input type="text" id="search-safe-input" placeholder="Buscar usuario...">
+              <button class="cmd-btn safe" onclick="runSearch('secure')">Buscar</button>
+            </div>
+            <div class="sql-display" id="search-safe-query" style="border-color:rgba(34,197,94,0.3);min-height:40px;font-size:0.75rem">—</div>
+            <div id="search-safe-results" style="margin-top:8px;font-size:0.85rem;color:var(--text-secondary)">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+</body>
+</html>
