@@ -166,6 +166,42 @@
 
       <div class="card">
         <div class="card-header">
+          <div class="card-icon warn">🧹</div>
+          <div>
+            <div class="card-title">Sanitización vs Parametrización</div>
+            <div class="card-subtitle">Dos capas de defensa complementarias</div>
+          </div>
+        </div>
+        <p style="color:var(--text-secondary);margin-bottom:16px">
+          La <strong>parametrización</strong> separa el código SQL de los datos del usuario,
+          evitando que los datos se interpreten como código. La <strong>sanitización</strong>
+          limpia el input <em>antes</em> de usarlo, eliminando caracteres que podrían ser
+          peligrosos incluso dentro de un contexto parametrizado (como los wildcards
+          <code style="font-family:'JetBrains Mono',monospace">%</code> y
+          <code style="font-family:'JetBrains Mono',monospace">_</code> en cláusulas LIKE).
+        </p>
+        <div class="info-box danger">
+          <span>⚠️</span>
+          <div>
+            <strong>Solo parametrización (insuficiente para LIKE):</strong><br>
+            Input: <code style="font-family:'JetBrains Mono',monospace;color:var(--accent-red)">%</code>
+            → parámetro: <code style="font-family:'JetBrains Mono',monospace;color:var(--accent-red)">%%</code>
+            → retorna TODOS los registros, igual que sin protección.
+          </div>
+        </div>
+        <div class="info-box success">
+          <span>🟢</span>
+          <div>
+            <strong>Sanitización + Parametrización (defensa en profundidad):</strong><br>
+            Input: <code style="font-family:'JetBrains Mono',monospace;color:var(--accent-green)">%</code>
+            → sanitizado: <code style="font-family:'JetBrains Mono',monospace;color:var(--accent-green)">(vacío — bloqueado)</code>
+            → se rechaza antes de llegar a la BD.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
           <div class="card-icon warn">💉</div>
           <div>
             <div class="card-title">¿Cómo funciona el ataque?</div>
@@ -401,23 +437,43 @@ $stmt->execute(
         </div>
 
         <div class="comparison-grid" style="margin-top:16px">
+          <!-- Vulnerable Side -->
           <div class="comparison-col vulnerable-col">
             <h3><span class="badge danger">🔴 VULNERABLE</span></h3>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:6px">
+              Prueba: <code onclick="document.getElementById('search-vuln-input').value=`%' OR '1'='1' --`"
+                style="cursor:pointer;color:var(--accent-red)">%' OR '1'='1' --</code> (retorna todo)
+            </p>
             <div class="cmd-input-group">
               <input type="text" id="search-vuln-input" placeholder="Buscar usuario...">
               <button class="cmd-btn danger" onclick="runSearch('vulnerable')">Buscar</button>
             </div>
-            <div class="sql-display" id="search-vuln-query" style="border-color:rgba(239,68,68,0.3);min-height:40px;font-size:0.75rem">—</div>
-            <div id="search-vuln-results" style="margin-top:8px;font-size:0.85rem;color:var(--text-secondary)">—</div>
+            <div class="sql-display" id="search-vuln-query"
+              style="border-color:rgba(239,68,68,0.3);min-height:40px;font-size:0.75rem">—</div>
+            <div id="search-vuln-results"
+              style="margin-top:8px;font-size:0.85rem;color:var(--text-secondary)">—</div>
           </div>
+
+          <!-- Secure Side -->
           <div class="comparison-col secure-col">
             <h3><span class="badge safe">🟢 SEGURO</span></h3>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:6px">
+              Prueba el mismo payload — el modo seguro lo sanitiza y bloquea.
+            </p>
             <div class="cmd-input-group">
               <input type="text" id="search-safe-input" placeholder="Buscar usuario...">
               <button class="cmd-btn safe" onclick="runSearch('secure')">Buscar</button>
             </div>
-            <div class="sql-display" id="search-safe-query" style="border-color:rgba(34,197,94,0.3);min-height:40px;font-size:0.75rem">—</div>
-            <div id="search-safe-results" style="margin-top:8px;font-size:0.85rem;color:var(--text-secondary)">—</div>
+            <div class="sql-display" id="search-safe-query"
+              style="border-color:rgba(34,197,94,0.3);min-height:40px;font-size:0.75rem">—</div>
+            <!-- NUEVO: caja de sanitización — app.js la muestra/oculta dinámicamente -->
+            <div id="search-safe-sanitize"
+              style="display:none;margin-top:8px;padding:10px 14px;border-radius:var(--radius);
+                     background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);
+                     font-size:0.82rem;color:var(--text-secondary);line-height:1.6">
+            </div>
+            <div id="search-safe-results"
+              style="margin-top:8px;font-size:0.85rem;color:var(--text-secondary)">—</div>
           </div>
         </div>
       </div>

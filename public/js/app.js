@@ -278,9 +278,10 @@ async function runCommand(mode) {
 
 // ─── Search ──────────────────────────────────────────────────────────
 async function runSearch(mode) {
-  const inputId = mode === 'vulnerable' ? 'search-vuln-input' : 'search-safe-input';
-  const queryId = mode === 'vulnerable' ? 'search-vuln-query' : 'search-safe-query';
-  const resultsId = mode === 'vulnerable' ? 'search-vuln-results' : 'search-safe-results';
+  const inputId    = mode === 'vulnerable' ? 'search-vuln-input'   : 'search-safe-input';
+  const queryId    = mode === 'vulnerable' ? 'search-vuln-query'   : 'search-safe-query';
+  const resultsId  = mode === 'vulnerable' ? 'search-vuln-results' : 'search-safe-results';
+  const sanitId    = 'search-safe-sanitize'; // solo existe en el panel seguro
   const searchTerm = document.getElementById(inputId).value;
 
   try {
@@ -291,11 +292,41 @@ async function runSearch(mode) {
     });
     const data = await res.json();
 
-    document.getElementById(queryId).textContent = data.query || 'N/A';
+    // Mostrar la query ejecutada
+    document.getElementById(queryId).textContent = data.query || '❌ Query bloqueada';
 
+    // ── Panel de sanitización (solo modo seguro) ──────────────────
+    if (mode === 'secure') {
+      const sanitBox = document.getElementById(sanitId);
+      if (sanitBox) {
+        if (data.explanation?.sanitization_applied && data.originalInput !== data.sanitizedInput) {
+          sanitBox.style.display = 'block';
+          sanitBox.innerHTML = `
+            <strong>⚠️ Sanitización aplicada:</strong><br>
+            Input original: <code style="color:var(--accent-red)">"${escapeHtml(data.originalInput)}"</code><br>
+            Input sanitizado: <code style="color:var(--accent-green)">"${escapeHtml(data.sanitizedInput || '(vacío — bloqueado)')}"</code>
+          `;
+        } else if (!data.sanitizedInput) {
+          sanitBox.style.display = 'block';
+          sanitBox.innerHTML = `
+            <strong>🚫 Input completamente bloqueado:</strong><br>
+            Input original: <code style="color:var(--accent-red)">"${escapeHtml(data.originalInput)}"</code><br>
+            Resultado: el input solo contenía caracteres peligrosos y fue rechazado.
+          `;
+        } else {
+          sanitBox.style.display = 'block';
+          sanitBox.innerHTML = `
+            <strong>✅ Input limpio — sin sanitización necesaria:</strong><br>
+            <code style="color:var(--accent-green)">"${escapeHtml(data.sanitizedInput)}"</code>
+          `;
+        }
+      }
+    }
+
+    // ── Tabla de resultados ───────────────────────────────────────
+    const color = mode === 'vulnerable' ? 'var(--accent-red)' : 'var(--accent-green)';
     if (data.results && data.results.length > 0) {
-      let html = `<p style="color:${mode === 'vulnerable' ? 'var(--accent-red)' : 'var(--accent-green)'}">
-        ${data.rowCount} resultado(s) encontrados</p>`;
+      let html = `<p style="color:${color}">${data.rowCount} resultado(s) encontrados</p>`;
       html += '<table class="results-table"><thead><tr>';
       html += '<th>ID</th><th>Usuario</th><th>Email</th><th>Rol</th>';
       html += '</tr></thead><tbody>';
@@ -310,10 +341,13 @@ async function runSearch(mode) {
       html += '</tbody></table>';
       document.getElementById(resultsId).innerHTML = html;
     } else {
-      document.getElementById(resultsId).innerHTML = `<p style="color:var(--text-muted)">Sin resultados${data.error ? ' — Error: ' + escapeHtml(data.error) : ''}</p>`;
+      const msg = data.message || 'Sin resultados';
+      document.getElementById(resultsId).innerHTML =
+        `<p style="color:var(--text-muted)">${escapeHtml(msg)}</p>`;
     }
   } catch (err) {
-    document.getElementById(resultsId).innerHTML = '<p style="color:var(--accent-red)">Error de conexión</p>';
+    document.getElementById(resultsId).innerHTML =
+      '<p style="color:var(--accent-red)">Error de conexión</p>';
   }
 }
 

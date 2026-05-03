@@ -127,12 +127,59 @@ app.post('/api/search/vulnerable', (req, res) => {
 // ─────────────────────────────────────────────────────────────────────
 app.post('/api/search/secure', (req, res) => {
   const { searchTerm } = req.body;
+
+  // ── 1. Sanitización: eliminar wildcards y caracteres peligrosos de SQL LIKE
+  function sanitizeSearchInput(input) {
+    if (!input || input.trim() === '') return null;
+    return input
+      .trim()
+      .replace(/[%_\\]/g, '')          // elimina wildcards LIKE
+      .replace(/['";\-\-<>=]/g, '')    // elimina caracteres SQL peligrosos
+      .substring(0, 50);               // limita longitud
+  }
+
+  const sanitized = sanitizeSearchInput(searchTerm);
+
+  if (!sanitized) {
+    return res.json({
+      success: false,
+      mode: 'secure',
+      originalInput: searchTerm,
+      sanitizedInput: null,
+      query: null,
+      results: [],
+      rowCount: 0,
+      message: '❌ Input rechazado — Vacío o contiene solo caracteres peligrosos',
+      explanation: {
+        protection: 'Sanitización + Parametrización',
+        sanitization_applied: true,
+        reason: 'El input quedó vacío tras eliminar wildcards y caracteres SQL peligrosos',
+      }
+    });
+  }
+
+  // ── 2. Parametrización: el input sanitizado se pasa como parámetro, nunca concatenado
   const query = `SELECT id, username, email, role, full_name FROM users WHERE username LIKE ? OR email LIKE ? OR full_name LIKE ?`;
-  const param = `%${searchTerm}%`;
+  const param = `%${sanitized}%`;
 
   try {
     const results = execSafe(query, [param, param, param]);
-    res.json({ success: true, mode: 'secure', query: query + ` → Parámetro: '${param}'`, results, rowCount: results.length });
+    res.json({
+      success: true,
+      mode: 'secure',
+      originalInput: searchTerm,
+      sanitizedInput: sanitized,
+      query: `${query} → Parámetro: '${param}'`,
+      results,
+      rowCount: results.length,
+      explanation: {
+        protection: 'Sanitización + Parametrización',
+        sanitization_applied: searchTerm !== sanitized,
+        original_input: searchTerm,
+        sanitized_input: sanitized,
+        how_it_works: 'Primero se eliminan wildcards y caracteres peligrosos del input, luego se usa prepared statement para que el valor se trate como dato, nunca como código SQL.',
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, mode: 'secure', message: 'Error interno' });
   }
